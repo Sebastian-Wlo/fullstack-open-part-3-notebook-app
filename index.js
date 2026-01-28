@@ -1,5 +1,5 @@
 const express = require('express');
-var morgan = require('morgan');
+const morgan = require('morgan');
 const app = express();
 
 app.use(express.json());
@@ -38,10 +38,13 @@ const requestLogger = (request, response, next) => {
   next()
 }
 
-app.use(requestLogger)
+app.use(express.static('dist'));
+
+app.use(requestLogger);
+
 
 // Send all Persons
-app.get('/api/persons/', (request, response) => {
+app.get('/api/persons', (request, response) => {
   response.json(persons);
 })
 
@@ -56,7 +59,7 @@ const getPersonByName = (name) => {
 }
 
 const generateId = () => {
-  return persons.length + 1;
+  return parseInt(persons[persons.length - 1].id) + 1;
 }
 
 // Send person specified by Id
@@ -64,26 +67,32 @@ app.get('/api/persons/:id', (request, response) => {
   const id = request.params.id;
   const person = getPersonById(id);
   if (person) {
-    const test = JSON.stringify(person)
-    return response.status(204).end(test);
+    return response.status(204).send(person);
   }
   else {
     return response.status(400).json({
       error: `person with the id '${id}' not found`})
   }
+})
+
+// Update a person
+app.put('/api/persons/:id', (request, response) => {
+  const id = request.params.id;
+  const updatedPerson = request.body;
+  updatedPerson.id = id;
+  persons = [...persons, updatedPerson];
+  return response.send(updatedPerson);
 
 })
 
 // Add a person
 app.post('/api/persons/', (request, response) => {
   const person = request.body;
-  console.log()
   if (!getPersonByName(person.name)) {
     const nextId = generateId();
     person.id = String(nextId);
     persons = [...persons, person];
-    //console.log(person)
-    return response.status(204).end();
+    return response.json(person);
   } else {
     return response.status(400).json({
       error: `${person.name} already exists`
@@ -95,7 +104,7 @@ app.post('/api/persons/', (request, response) => {
 // DELETE a person by ID
 app.delete('/api/persons/:id', (request, response) => {
   const id = request.params.id;
-  const person = getPersonById(id)
+  const person = getPersonById(id);
   if (person) {
     persons = persons.filter(person => person.id !== id);
     response.status(204).end();
